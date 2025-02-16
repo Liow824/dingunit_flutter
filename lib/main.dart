@@ -2,22 +2,31 @@ import 'package:flutter/material.dart';
 import 'nav/session_manager.dart';
 import 'nav/routes.dart';
 
-void main() {
-  runApp(const DingUnit());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SessionManager.loadSession();
+
+  runApp(MaterialApp(
+    initialRoute: AppRoutes.login,
+    onGenerateRoute: SessionManager.generateRoute,
+  ));
 }
 
-class DingUnit extends StatelessWidget {
-  const DingUnit({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ding Unit',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      initialRoute: AppRoutes.login, // Start with login
-      onGenerateRoute: SessionManager.generateRoute, // Use SessionManager for routing
-    );
-  }
-}
+// class MyApp extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+      
+//       // Force the app to always start at AuthenticationPage
+//       home: const AuthenticationPage(),
+      
+//       // Commented out the session-based navigation
+//       /*
+//       home: SessionManager.currentUserGuid == null
+//           ? const AuthenticationPage()
+//           : HomePage(userGuid: SessionManager.currentUserGuid!),
+//       */
+//     );
+//   }
+// }

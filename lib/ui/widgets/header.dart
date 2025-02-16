@@ -1,38 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application/data/class/user.dart';
 import '../../nav/routes.dart';
 import '../../nav/session_manager.dart';
-import '../../data/dataset/user.dart';
 
-class Header extends StatelessWidget {
-  final BuildContext context;
-
-  const Header({super.key, required this.context});
+class Header extends StatefulWidget {
+  const Header({super.key});
 
   @override
-  Widget build(BuildContext context) {
-// Get the current user ID from SessionManager
-    final currentUserId = SessionManager.currentUserId;
+  State<Header> createState() => _HeaderState();
+}
 
-    // Find the user's role based on their ID
-    String userRole = 'User'; // Default role
-    if (currentUserId != null) {
-      final user = userDataset.firstWhere(
-        (u) => u.id == currentUserId,
-        orElse: () => User(
-          id: -1,
-          username: 'Unknown',
-          email: 'unknown@example.com',
-          role: 'User', // Default to 'User'
-          accessRight: 'Terminated', // Default to 'Terminated' if no match
-          credentialsId: -1,
-          clientIds: [],
-          reservationIds: [],
-        ),
-      );
-      userRole = user.role; // Assign the found user's role
-    }
+class _HeaderState extends State<Header> {
+  String userRole = 'User';
 
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  /// Load user role securely
+  void _loadUserRole() async {
+    await SessionManager.loadSession(); // Ensure session data is loaded
+    
+    setState(() {
+      userRole = SessionManager.currentUserRole ?? 'User';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) { 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
       decoration: BoxDecoration(
@@ -72,10 +68,13 @@ class Header extends StatelessWidget {
                 }),
               ],
               const SizedBox(width: 16),
+              _buildHeaderButton('Profile', () {
+                Navigator.pushNamed(context, AppRoutes.profile);
+              }),
+              const SizedBox(width: 16),
               _buildHeaderButton('Logout', () {
-                SessionManager.logout(); // Reset session
-                Navigator.pushReplacementNamed(
-                    context, AppRoutes.login); // Redirect to login
+                SessionManager.logout();
+                Navigator.pushReplacementNamed(context, AppRoutes.login);
               }),
             ],
           ),

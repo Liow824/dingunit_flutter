@@ -1,220 +1,191 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application/data/class/bookingTrx.dart';
-import '../../data/class/clientData.dart';
-import '../../data/dataset/booking.dart';
-import '../../data/dataset/client.dart';
-import '../../data/dataset/user.dart';
+import '../../api_service.dart';
+import 'package:intl/intl.dart';
 
 class UserInformPage extends StatefulWidget {
-  final int userId;
-  final String userName;
-  final String userStatus;
+  final String userGuid;
 
-  const UserInformPage({
-    super.key,
-    required this.userId,
-    required this.userName,
-    required this.userStatus,
-  });
+  const UserInformPage({super.key, required this.userGuid});
 
   @override
   State<UserInformPage> createState() => _UserInformPageState();
 }
 
 class _UserInformPageState extends State<UserInformPage> {
-  late List<BookingTrx> reservationHistory;
+  Map<String, dynamic>? user;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Fetch reservation history for the user
-    reservationHistory = bookingDataset
-        .where((booking) => booking.authorId == widget.userId)
-        .toList();
+    _loadUserDetails();
   }
 
-  // Approve or Reject actions for pending users
-  void _approveUser() {
-    setState(() {
-      final user = userDataset.firstWhere((user) => user.id == widget.userId);
-      user.status = 'Active';
-    });
-    Navigator.pop(context);
+  /// 🚀 Load User Details from Backend
+  Future<void> _loadUserDetails() async {
+    try {
+      final userDetails = await ApiService.getUserDetails(widget.userGuid);
+      final data = userDetails['data'];
+      setState(() {
+        user = {
+          'Username': data['Username'] ?? 'N/A',
+          'Email': data['Email'] ?? 'N/A',
+          'AccessRight': data['AccessRight'] ?? 'N/A',
+          'CreatedTime': data['CreatedTime'] != null
+              ? formatDateOnly(data['CreatedTime'])
+              : 'N/A',
+          'GUID': data['GUID'] ?? 'N/A',
+        };
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+    }
   }
 
-  void _rejectUser() {
-    setState(() {
-      final user = userDataset.firstWhere((user) => user.id == widget.userId);
-      user.status = 'Terminated';
-    });
-    Navigator.pop(context);
+  /// 🚀 Update User Status
+  Future<void> _updateUserStatus(int newStatus) async {
+    try {
+      final response = await ApiService.updateUserStatus(user?['GUID'], newStatus);
+      if (response['status_code'] == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User status updated successfully.')),
+        );
+        _loadUserDetails();
+      } else {
+        throw Exception(response['message'] ?? 'Failed to update status.');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating status: ${e.toString()}')),
+      );
+    }
   }
 
-  // Terminate or Activate actions for users
-  void _terminateUser() {
-    setState(() {
-      final user = userDataset.firstWhere((user) => user.id == widget.userId);
-      user.status = 'Terminated';
-    });
-    Navigator.pop(context);
+  /// 🚀 Delete User
+  Future<void> _deleteUser() async {
+    try {
+      await ApiService.deleteUser(user?['GUID']);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User deleted successfully')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete user')),
+      );
+    }
   }
 
-  void _activateUser() {
-    setState(() {
-      final user = userDataset.firstWhere((user) => user.id == widget.userId);
-      user.status = 'Active';
-    });
-    Navigator.pop(context);
+  /// 📅 Format Date
+  String formatDateOnly(String isoDate) {
+    DateTime parsedDate = DateTime.parse(isoDate);
+    return DateFormat('dd MMM yyyy').format(parsedDate);
   }
 
+  /// 🟡 Buttons Based on Access Right
+  Widget _buildAccessButtons(String accessRight) {
+    switch (accessRight.toLowerCase()) {
+      case 'pending':
+        return Row(
+          children: [
+            ElevatedButton.icon(
+              icon: const Icon(Icons.check, color: Colors.white),
+              label: const Text('Approve'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () => _updateUserStatus(0), // Change to Active
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.close, color: Colors.white),
+              label: const Text('Reject'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: _deleteUser, // Delete User
+            ),
+          ],
+        );
+
+      case 'active':
+        return ElevatedButton.icon(
+          icon: const Icon(Icons.block, color: Colors.white),
+          label: const Text('Block'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+          onPressed: () => _updateUserStatus(2), // Block User
+        );
+
+      case 'block': // ✅ Corrected keyword
+        return ElevatedButton.icon(
+          icon: const Icon(Icons.replay, color: Colors.white),
+          label: const Text('Reactivate'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          onPressed: () => _updateUserStatus(0), // Reactivate (Active)
+        );
+
+      default:
+        return const SizedBox(); // No buttons for unknown status
+    }
+  }
+
+  /// 🟢 User Information UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('User: ${widget.userName}'),
+        title: const Text('User Information'),
+        backgroundColor: Colors.blueAccent,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Name and action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  widget.userName,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                Row(
-                  children: [
-                    if (widget.userStatus == 'Active')
-                      ElevatedButton(
-                        onPressed: _terminateUser,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        child: const Text('Terminate'),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🟡 Header & Buttons Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'User Details',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                    if (widget.userStatus == 'Pending') ...[
-                      ElevatedButton(
-                        onPressed: _approveUser,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: const Text('Approve'),
-                      ),
-                      const SizedBox(width: 10),
-                      ElevatedButton(
-                        onPressed: _rejectUser,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        child: const Text('Reject'),
-                      ),
+                      _buildAccessButtons(user?['AccessRight'] ?? ''),
                     ],
-                    if (widget.userStatus == 'Terminated')
-                      ElevatedButton(
-                        onPressed: _activateUser,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                        ),
-                        child: const Text('Activate'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 🟢 User Information Card
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _infoRow('Username:', user?['Username'] ?? 'N/A'),
+                          _infoRow('Email:', user?['Email'] ?? 'N/A'),
+                          _infoRow('Account Status:', user?['AccessRight'] ?? 'N/A'),
+                          _infoRow('Member Since:', user?['CreatedTime'] ?? 'N/A'),
+                        ],
                       ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // User Information Section
-            const Text(
-              'User Information',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            _buildUserInformation(),
-
-            // Reservation History (only for Active users)
-            if (widget.userStatus == 'Active') ...[
-              const SizedBox(height: 20),
-              const Text(
-                'Reservation History',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: reservationHistory.isEmpty
-                    ? const Center(child: Text('No reservations found'))
-                    : ListView.builder(
-                        itemCount: reservationHistory.length,
-                        itemBuilder: (context, index) {
-                          final booking = reservationHistory[index];
-                          return _buildReservationTile(booking);
-                        },
-                      ),
-              ),
-            ],
-          ],
-        ),
-      ),
+            ),
     );
   }
 
-  // Helper to build user information
-  Widget _buildUserInformation() {
-    final user = userDataset.firstWhere((user) => user.id == widget.userId);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildInfoRow('Name', user.username),
-        _buildInfoRow('Email', user.email),
-        _buildInfoRow('Role', user.role),
-        _buildInfoRow('Status', widget.userStatus),
-      ],
-    );
-  }
-
-  // Helper to build reservation history tile
-  Widget _buildReservationTile(BookingTrx booking) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8.0),
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(8.0),
-        color: Colors.white,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Reservation ID: ${booking.id}'),
-          Text('Status: ${booking.status}'),
-          Text('Created Date: ${booking.createdDate.toLocal()}'),
-          Text('Client Name: ${booking.clientData.fullName}'),
-        ],
-      ),
-    );
-  }
-
-  // Helper to build info row
-  Widget _buildInfoRow(String label, String value) {
+  /// 📝 Info Row
+  Widget _infoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            flex: 1,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(value),
-          ),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(value, style: const TextStyle(fontSize: 16)),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+/** 
 class MHubCredentials {
   final int id; // Credentials ID
   final String email; // Email for login
@@ -11,3 +12,4 @@ class MHubCredentials {
     required this.userId,
   });
 }
+**/

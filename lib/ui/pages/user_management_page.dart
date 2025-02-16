@@ -1,185 +1,205 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application/ui/pages/user_inform_page.dart';
+import 'user_inform_page.dart'; // Import the User Information Page
+import '../../api_service.dart';
 
-class UserManager extends StatefulWidget {
-  const UserManager({super.key});
+class UserManagementPage extends StatefulWidget {
+  const UserManagementPage({super.key});
 
   @override
-  _UserManagerPageState createState() => _UserManagerPageState();
+  State<UserManagementPage> createState() => _UserManagementPageState();
 }
 
-class _UserManagerPageState extends State<UserManager> {
-  final List<Map<String, String>> _allUsers = List.generate(
-    200,
-    (index) => {
-      'name': 'User $index',
-      'role': index % 3 == 0 ? 'Admin' : 'User',
-      'status': index % 4 == 0
-          ? 'Active'
-          : index % 4 == 1
-              ? 'Pending'
-              : 'Terminated',
-    },
-  ); // All users with roles and statuses
+class _UserManagementPageState extends State<UserManagementPage> {
+  List<Map<String, dynamic>> _users = [];
+  int _currentPage = 1;
+  final int _pageSize = 10;
+  String _searchTerm = '';
+  bool _hasNextPage = false;
 
-  final List<Map<String, String>> _displayedUsers = [];
-  final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-
-  static const int _batchSize = 15; // Number of users per page
-  bool _isLoading = false;
-  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _loadMoreUsers();
-    _scrollController.addListener(_onScroll);
+    _fetchUsers();
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
+  /// 🚀 Fetch Users from Backend
+  Future<void> _fetchUsers() async {
+    try {
+      int pageStart = (_currentPage - 1) * _pageSize;
+      final result = await ApiService.getUsersList(
+        pageStart: pageStart,
+        pageSize: _pageSize,
+        searchTerm: _searchTerm,
+      );
 
-  void _onScroll() {
-    if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
-      _loadMoreUsers();
+      if (result['status_code'] == 0) {
+        List<Map<String, dynamic>> users = List<Map<String, dynamic>>.from(result['data']);
+        setState(() {
+          _users = users;
+          _hasNextPage = users.length == _pageSize;
+        });
+      } else {
+        _showErrorDialog(result['message'] ?? 'Unknown error occurred');
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to load users: $e');
     }
   }
 
-  void _loadMoreUsers() {
-    if (_isLoading) return;
+  /// 🔄 General Refresh Function
+  void _refreshPage() {
     setState(() {
-      _isLoading = true;
+      _currentPage = 1;
+      _searchTerm = '';
+      _searchController.clear();
     });
+    _fetchUsers();
+  }
 
-    Future.delayed(const Duration(seconds: 1), () {
+  /// ⬅️ Previous Page
+  void _goToPreviousPage() {
+    if (_currentPage > 1) {
       setState(() {
-        final filteredUsers = _allUsers
-            .where((user) =>
-                user['role'] != 'Admin' && // Exclude admins
-                user['name']!
-                    .toLowerCase()
-                    .contains(_searchQuery.toLowerCase()))
-            .toList();
-
-        final int remainingUsers = filteredUsers.length - _displayedUsers.length;
-        final int loadCount = remainingUsers > _batchSize
-            ? _batchSize
-            : remainingUsers;
-
-        _displayedUsers.addAll(
-            filteredUsers.sublist(_displayedUsers.length, _displayedUsers.length + loadCount));
-        _isLoading = false;
+        _currentPage--;
       });
-    });
+      _fetchUsers();
+    }
   }
 
-  void _onSearch(String query) {
-    setState(() {
-      _searchQuery = query;
-      _displayedUsers.clear();
-      _loadMoreUsers();
-    });
+  /// ➡️ Next Page
+  void _goToNextPage() {
+    if (_hasNextPage) {
+      setState(() {
+        _currentPage++;
+      });
+      _fetchUsers();
+    }
   }
 
-  void _onUserTap(Map<String, String> user) {
+  /// 💥 Error Dialog
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🟢 Navigate to User Info
+  void _onUserTap(Map<String, dynamic> user) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => UserInformPage(
-          userId: _allUsers.indexOf(user), // Use index as ID
-          userName: user['name']!,
-          userStatus: user['status']!,
+          userGuid: user['guid'], 
         ),
       ),
-    );
+    ).then((_) => _refreshPage()); // Refresh after returning from details page
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("User Manager (${_allUsers.where((user) => user['role'] != 'Admin').length})"),
+        title: const Text('User Management'),
         backgroundColor: Colors.blueAccent,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearch,
-              decoration: InputDecoration(
-                hintText: 'Search by name (e.g., User 1)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // 🟡 Search Bar with Refresh Button
+            Row(
+              children: [
+                // Search Bar (Flexible to take available space)
+                Flexible(
+                  child: TextField(
+                    controller: _searchController,
+                    onSubmitted: (_) => _fetchUsers(),
+                    decoration: InputDecoration(
+                      labelText: 'Search Users',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: _refreshPage,
+                      ),
+                    ),
+                  ),
                 ),
-                prefixIcon: const Icon(Icons.search),
-              ),
+                const SizedBox(width: 8), // Spacing between search bar and button
+
+                // 🔄 Refresh Button (Same row)
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _refreshPage,
+                  tooltip: 'Refresh Users',
+                  color: Colors.blueAccent,
+                  iconSize: 30,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              padding: const EdgeInsets.all(10.0),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.blue,
-                  width: 2.0,
-                ),
-                borderRadius: BorderRadius.circular(12.0),
-              ),
+            const SizedBox(height: 16),
+
+            // 🟢 User List
+            Expanded(
               child: ListView.builder(
-                controller: _scrollController,
-                itemCount: _displayedUsers.length + (_isLoading ? 1 : 0),
+                itemCount: _users.length,
                 itemBuilder: (context, index) {
-                  if (index < _displayedUsers.length) {
-                    final user = _displayedUsers[index];
-                    return GestureDetector(
-                      onTap: () => _onUserTap(user),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8.0), // Space between rows
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12.0, horizontal: 10.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: Colors.grey,
-                            width: 1.0,
-                          ),
-                          borderRadius: BorderRadius.circular(8.0), // Rounded corners
+                  final user = _users[index];
+                  return GestureDetector(
+                    onTap: () => _onUserTap(user),
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(vertical: 6.0),
+                      elevation: 2,
+                      child: ListTile(
+                        title: Text(
+                          '${user['username']} (${user['access_right']})',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            user['name']!,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        trailing: const Icon(Icons.arrow_forward),
                       ),
-                    );
-                  } else {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
+                    ),
+                  );
                 },
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+
+            // 🟡 Pagination Controls
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_currentPage > 1)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_left),
+                    onPressed: _goToPreviousPage,
+                  ),
+                Text(
+                  'Page $_currentPage',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                if (_hasNextPage)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_right),
+                    onPressed: _goToNextPage,
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application/data/dataset/user.dart';
-import '../../backend/authentication.dart';
-import '../widgets/register_dialog.dart';
+import 'home_page.dart';
+import '../../api_service.dart';
+import '../../nav/session_manager.dart';
+import '../../nav/routes.dart';
+
 
 class AuthenticationPage extends StatefulWidget {
-  final Function(int userId) onLoginSuccess;
-
-  const AuthenticationPage({super.key, required this.onLoginSuccess});
+  const AuthenticationPage({super.key});
 
   @override
   State<AuthenticationPage> createState() => _AuthenticationPageState();
@@ -17,113 +17,65 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void handleLogin() {
+  Future<void> handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      final email = _emailController.text;
-      final password = _passwordController.text;
+      String email = _emailController.text;
+      String password = _passwordController.text;
 
-      final userId = Authentication.verifyCredentials(email, password);
+      try {
+        debugPrint("Attempting login with email: $email");
 
-      if (userId != -1) {
-        final user = userDataset.firstWhere((u) => u.id == userId);
+        final result = await ApiService.login(email, password);
 
-        if (user.accessRight == 'Pending') {
-          // Show dialog for pending accounts
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Account Pending'),
-              content: const Text(
-                  'Your account is still pending approval. Please wait for admin approval.'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close the dialog
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
-        } else if (user.accessRight == 'Active') {
-          // Proceed to home page if account is active
-          widget.onLoginSuccess(userId); // Pass the user ID to the session manager
-        } else if (user.accessRight == 'Terminated') {
-          // Show dialog for terminated accounts
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Account Terminated'),
-              content: const Text(
-                  'Your account has been terminated. Please contact support for further assistance.'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close the dialog
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
+        if (result['status']) {
+          final userGuid = result['guid'];
+
+          // Fetch user details directly here
+          final userDetails = await ApiService.getUserDetails(userGuid);
+          final String userRole = userDetails['data']['Role'] ?? 'User';
+
+          // Save session details
+          await SessionManager.login(userGuid, userRole);
+
+          // Navigate to Home
+          if (mounted) {
+            Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (_) => HomePage(),
+            ));
+          }
+        } else {
+          showMessageDialog("Login Failed", result['message']);
         }
-      } else {
-        // Handle invalid credentials
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Invalid email or password.",
-            ),
-          ),
-        );
+      } catch (e) {
+        debugPrint("Error during login: $e");
+        showMessageDialog("Error", "An unexpected error occurred. Please try again.");
       }
     }
   }
 
-  void handleRegister() {
+  void showMessageDialog(String title, String message, {VoidCallback? onConfirm}) {
     showDialog(
       context: context,
-      builder: (context) => RegisterDialog(
-        onRegister: (newUser) {
-          bool success = Authentication.register(newUser);
-          if (success) {
-            Navigator.of(context).pop(); // Close the dialog
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Registration successful!")),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Email already exists.")),
-            );
-          }
-        },
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close the dialog
+              if (onConfirm != null) onConfirm(); // If there's a confirmation action, execute it
+            },
+            child: const Text('OK'),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget buildCustomButton(String label, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        side: const BorderSide(color: Colors.blue, width: 1.5), // Border line
-        backgroundColor: Colors.white, // Button background color
-        foregroundColor: Colors.blue, // Text color
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8), // Rounded corners
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-        elevation: 2, // Shadow effect
-      ),
-      child: Text(label, style: const TextStyle(fontSize: 18)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final inputDecoration = InputDecoration(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
     );
 
@@ -131,16 +83,13 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
       body: Center(
         child: Container(
           padding: const EdgeInsets.all(30),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.blue, width: 3),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          width: 500, // Increased width
+          width: 400,
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // App Title
                 const Text(
                   "DingUnit",
                   style: TextStyle(
@@ -150,44 +99,59 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   ),
                 ),
                 const SizedBox(height: 30),
+
+                // Email Input
                 TextFormField(
                   controller: _emailController,
                   decoration: inputDecoration.copyWith(labelText: "Email"),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    return null;
-                  },
+                  validator: (value) => value!.isEmpty ? "Please enter your email" : null,
                 ),
                 const SizedBox(height: 20),
+
+                // Password Input
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
                   decoration: inputDecoration.copyWith(labelText: "Password"),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    return null;
-                  },
+                  validator: (value) => value!.isEmpty ? "Please enter your password" : null,
                 ),
                 const SizedBox(height: 30),
-                buildCustomButton("Login", handleLogin), // Styled login button
-                const SizedBox(height: 30),
+
+                // Button Row
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    buildCustomButton("Register", handleRegister),
-                    buildCustomButton(
-                      "Forget Password",
-                      () {
-                        // Forget password functionality placeholder
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text("Forget Password not implemented")),
-                        );
+                    // Register Button
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.register);
                       },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: Colors.blue),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+                      ),
+                      child: const Text("Register"),
+                    ),
+
+                    const SizedBox(width: 20), // Space between buttons
+
+                    // Login Button
+                    ElevatedButton(
+                      onPressed: handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+                      ),
+                      child: const Text("Login"),
                     ),
                   ],
                 ),

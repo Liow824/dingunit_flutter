@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application/nav/routes.dart';
+import '../../nav/routes.dart';
 import '../widgets/header.dart';
 
 class ActionPage extends StatelessWidget {
@@ -10,7 +10,7 @@ class ActionPage extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          Header(context: context), // Add header at the top
+          const Header(),
           Expanded(
             child: Center(
               child: Column(
