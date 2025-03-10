@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../nav/routes.dart';
-import '../widgets/header.dart';
+import 'package:flutter_application/nav/routes.dart';
+import 'package:flutter_application/ui/widgets/header.dart';
+import 'package:flutter_application/ui/pages/reservation_select.dart';
 
 class ActionPage extends StatelessWidget {
   const ActionPage({super.key});
@@ -16,10 +17,10 @@ class ActionPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Handle "Data Manage" action
+                  // Data Manager Button
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, AppRoutes.draftManage); // Navigate to the Draft Manage Page
+                      Navigator.pushNamed(context, AppRoutes.draftManage);
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
@@ -28,23 +29,22 @@ class ActionPage extends StatelessWidget {
                     child: const Text("Data Manager"),
                   ),
 
-                  
-                  // Space between buttons
-                  const SizedBox(height: 20), 
-                  
-                  // Handle "Season Start" action
+                  const SizedBox(height: 20),
+
+                  // Reservation Button (Opens Draft Selection Dialog)
                   ElevatedButton(
                     onPressed: () {
-                      print("Season Start button pressed");
+                      showDialog(
+                        context: context,
+                        builder: (context) => const ReservationSelectDialog(),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 15, horizontal: 30),
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
                       textStyle: const TextStyle(fontSize: 18),
                     ),
-                    child: const Text("Season Start"),
+                    child: const Text("Reservation"),
                   ),
-
                 ],
               ),
             ),

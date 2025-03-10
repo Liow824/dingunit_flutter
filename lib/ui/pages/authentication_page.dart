@@ -23,7 +23,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
       String password = _passwordController.text;
 
       try {
-        debugPrint("Attempting login with email: $email");
+        // debugPrint("Attempting login with email: $email");
 
         final result = await ApiService.login(email, password);
 
@@ -47,7 +47,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
           showMessageDialog("Login Failed", result['message']);
         }
       } catch (e) {
-        debugPrint("Error during login: $e");
+        // debugPrint("Error during login: $e");
         showMessageDialog("Error", "An unexpected error occurred. Please try again.");
       }
     }

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'user_inform_page.dart'; // Import the User Information Page
+import 'user_inform_page.dart';
 import '../../api_service.dart';
 
-class UserManagementPage extends StatefulWidget {
-  const UserManagementPage({super.key});
+class UserManager extends StatefulWidget {
+  const UserManager({super.key});
 
   @override
-  State<UserManagementPage> createState() => _UserManagementPageState();
+  State<UserManager> createState() => UserManagerState();
 }
 
-class _UserManagementPageState extends State<UserManagementPage> {
+class UserManagerState extends State<UserManager> {
   List<Map<String, dynamic>> _users = [];
   int _currentPage = 1;
   final int _pageSize = 10;
@@ -28,17 +28,27 @@ class _UserManagementPageState extends State<UserManagementPage> {
   Future<void> _fetchUsers() async {
     try {
       int pageStart = (_currentPage - 1) * _pageSize;
+      
+      // Fetch _pageSize + 1 users to check if more pages exist
       final result = await ApiService.getUsersList(
         pageStart: pageStart,
-        pageSize: _pageSize,
+        pageSize: _pageSize + 1, // Fetch one extra user
         searchTerm: _searchTerm,
       );
 
-      if (result['status_code'] == 0) {
-        List<Map<String, dynamic>> users = List<Map<String, dynamic>>.from(result['data']);
+      if (result['status']) {
+        List<Map<String, dynamic>> users = List<Map<String, dynamic>>.from(result['users']);
+
         setState(() {
+          if (users.length > _pageSize) {
+            // More users exist -> Set _hasNextPage to true
+            _hasNextPage = true;
+            users.removeLast(); // Remove the extra user we fetched
+          } else {
+            // No more users -> Set _hasNextPage to false
+            _hasNextPage = false;
+          }
           _users = users;
-          _hasNextPage = users.length == _pageSize;
         });
       } else {
         _showErrorDialog(result['message'] ?? 'Unknown error occurred');
@@ -101,7 +111,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
       context,
       MaterialPageRoute(
         builder: (context) => UserInformPage(
-          userGuid: user['guid'], 
+          userGuid: user['GUID'], 
         ),
       ),
     ).then((_) => _refreshPage()); // Refresh after returning from details page
@@ -123,21 +133,35 @@ class _UserManagementPageState extends State<UserManagementPage> {
               children: [
                 // Search Bar (Flexible to take available space)
                 Flexible(
-                  child: TextField(
-                    controller: _searchController,
-                    onSubmitted: (_) => _fetchUsers(),
-                    decoration: InputDecoration(
-                      labelText: 'Search Users',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                  child:      
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchTerm = value.trim(); // Update search term dynamically
+                          _currentPage = 1; // Reset to first page when searching
+                        });
+                        _fetchUsers(); // Fetch users immediately when typing
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Search Users',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchTerm = ''; // Reset search term
+                              _currentPage = 1; // Reset to first page
+                            });
+                            _fetchUsers(); // Fetch full user list again
+                          },
+                        ),
                       ),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: _refreshPage,
-                      ),
-                    ),
-                  ),
+                    )
                 ),
                 const SizedBox(width: 8), // Spacing between search bar and button
 
@@ -165,10 +189,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       margin: const EdgeInsets.symmetric(vertical: 6.0),
                       elevation: 2,
                       child: ListTile(
-                        title: Text(
-                          '${user['username']} (${user['access_right']})',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                          title: Text(
+                            '${user['Username']?.toString() ?? 'Unknown'} (${user['AccessRight']?.toString() ?? 'N/A'})',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(user['Email']?.toString() ?? 'No Email Provided'),
                         trailing: const Icon(Icons.arrow_forward),
                       ),
                     ),

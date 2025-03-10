@@ -85,6 +85,21 @@ class _RegistrationPageState extends State<RegistrationPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.yellow[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange),
+                  ),
+                  child: const Text(
+                    "Please use the same email and password format as registered on MHUB (https://secure.mhub.my/login).",
+                    style: TextStyle(fontSize: 14, color: Colors.black),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
                 // Username Input
                 TextFormField(
                   controller: _usernameController,

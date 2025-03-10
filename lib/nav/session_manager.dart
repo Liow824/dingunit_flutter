@@ -1,3 +1,8 @@
+import 'package:flutter_application/ui/pages/draft_create_page.dart';
+import 'package:flutter_application/ui/pages/draft_detail_page.dart';
+import 'package:flutter_application/ui/pages/draft_edit_page.dart';
+import 'package:flutter_application/ui/pages/draft_manage_page.dart';
+import 'package:flutter_application/ui/pages/reservation_select.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../ui/pages/authentication_page.dart';
@@ -62,7 +67,7 @@ class SessionManager {
         return MaterialPageRoute(builder: (_) => const ActionPage());
 
       case AppRoutes.manage:
-        return MaterialPageRoute(builder: (_) => const UserManagementPage());
+        return MaterialPageRoute(builder: (_) => const UserManager());
 
       case AppRoutes.inform:
         final String? userGuid = settings.arguments as String?;
@@ -83,6 +88,30 @@ class SessionManager {
       case AppRoutes.profile:
         return MaterialPageRoute(builder: (_) => const ProfilePage());
 
+      case AppRoutes.draftManage:
+        return MaterialPageRoute(builder: (_) => const DraftManager());
+      
+      case AppRoutes.draftDetail:
+        final String draftGuid = settings.arguments as String;
+        return MaterialPageRoute(builder: (_) => DraftDetailPage(draftGuid: draftGuid));
+      
+      case AppRoutes.draftCreate:
+        return MaterialPageRoute(builder: (_) => const DraftCreatePage());
+
+      case AppRoutes.draftEdit:
+          final Map<String, dynamic>? draftData = settings.arguments as Map<String, dynamic>?;
+          if (draftData != null) {
+            return MaterialPageRoute(builder: (_) => DraftEditPage(draftData: draftData));
+          }
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('Error: Missing Draft Data')),
+            ),
+          );
+
+      case AppRoutes.reservationSelect:
+        return MaterialPageRoute(builder: (_) => const ReservationSelectDialog());
+
       default:
         return MaterialPageRoute(
           builder: (_) => const Scaffold(
@@ -94,13 +123,3 @@ class SessionManager {
 }
 
 
-      // Draft and reservation routes are disabled for now
-      // case AppRoutes.draftManage:
-      //   return MaterialPageRoute(builder: (_) => const DraftManagePage());
-      //
-      // case AppRoutes.draftDetail:
-      //   final String draftGuid = settings.arguments as String;
-      //   return MaterialPageRoute(builder: (_) => DraftDetailPage(draftGuid: draftGuid));
-      //
-      // case AppRoutes.draftCreate:
-      //   return MaterialPageRoute(builder: (_) => const DraftCreatePage());
