@@ -29,7 +29,7 @@ class _UserInformPageState extends State<UserInformPage> {
       setState(() {
         user = {
           'Username': data['Username'] ?? 'N/A',
-          'Email': data['Email'] ?? 'N/A',
+          'Email': data['ClientEmail'] ?? 'N/A',
           'AccessRight': data['AccessRight'] ?? 'N/A',
           'CreatedTime': data['CreatedTime'] != null
               ? formatDateOnly(data['CreatedTime'])
@@ -46,7 +46,8 @@ class _UserInformPageState extends State<UserInformPage> {
   /// 🚀 Update User Status
   Future<void> _updateUserStatus(int newStatus) async {
     try {
-      final response = await ApiService.updateUserStatus(user?['GUID'], newStatus);
+      final response =
+          await ApiService.updateUserStatus(user?['GUID'], newStatus);
       if (response['status_code'] == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User status updated successfully.')),
@@ -147,7 +148,8 @@ class _UserInformPageState extends State<UserInformPage> {
                     children: [
                       const Text(
                         'User Details',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       _buildAccessButtons(user?['AccessRight'] ?? ''),
                     ],
@@ -156,7 +158,8 @@ class _UserInformPageState extends State<UserInformPage> {
 
                   // 🟢 User Information Card
                   Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     elevation: 4,
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -164,9 +167,11 @@ class _UserInformPageState extends State<UserInformPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _infoRow('Username:', user?['Username'] ?? 'N/A'),
-                          _infoRow('Email:', user?['Email'] ?? 'N/A'),
-                          _infoRow('Account Status:', user?['AccessRight'] ?? 'N/A'),
-                          _infoRow('Member Since:', user?['CreatedTime'] ?? 'N/A'),
+                          _infoRow('Email:', user?['ClientEmail'] ?? 'N/A'),
+                          _infoRow(
+                              'Account Status:', user?['AccessRight'] ?? 'N/A'),
+                          _infoRow(
+                              'Member Since:', user?['CreatedTime'] ?? 'N/A'),
                         ],
                       ),
                     ),
@@ -184,7 +189,9 @@ class _UserInformPageState extends State<UserInformPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(label,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text(value, style: const TextStyle(fontSize: 16)),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application/api_service.dart';
 import 'package:flutter_application/nav/session_manager.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application/ui/pages/reservation_duration_select.dart';
 
 class ReservationSelectDialog extends StatefulWidget {
   const ReservationSelectDialog({super.key});
@@ -16,12 +17,25 @@ class ReservationSelectDialogState extends State<ReservationSelectDialog> {
   String? selectedDraftGuid;
   String? authorGuid;
 
+  int currentLimit = 10;
+  bool isFetchingMore = false;
+  String searchQuery = '';
+  List<Map<String, dynamic>> allDrafts = [];
+
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     loadDrafts();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent &&
+          !isFetchingMore &&
+          draftList.length < allDrafts.length) {
+        loadMoreDrafts();
+      }
+    });
   }
 
   @override
@@ -51,8 +65,12 @@ class ReservationSelectDialogState extends State<ReservationSelectDialog> {
     final response = await ApiService.getDraftList(authorGuid!);
 
     if (response['status']) {
+      final all = List<Map<String, dynamic>>.from(response['drafts'] ?? []);
+      // Show all drafts (both DraftStatus == 0 and DraftStatus == 1)
+      allDrafts = all.toList();
+
       setState(() {
-        draftList = List<Map<String, dynamic>>.from(response['drafts'] ?? []);
+        draftList = _applyFilters();
         isLoading = false;
       });
     } else {
@@ -63,6 +81,138 @@ class ReservationSelectDialogState extends State<ReservationSelectDialog> {
         SnackBar(content: Text(response['message'])),
       );
     }
+  }
+
+  Future<void> _showRetryDurationDialog() async {
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (context) => const RetryDurationDialog(),
+    );
+
+    if (minutes != null && selectedDraftGuid != null) {
+      final selectedDraft = draftList.firstWhere(
+        (draft) => draft['GUID'] == selectedDraftGuid,
+      );
+
+      final response = await ApiService.runAutoReserve(
+        selectedDraftGuid!,
+        minutes,
+      );
+
+      if (response['status']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Reservation started: ${response['message']}")),
+        );
+        Navigator.pop(context, selectedDraft);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed: ${response['message']}")),
+        );
+      }
+    }
+  }
+
+  List<Map<String, dynamic>> _applyFilters() {
+    final filtered = allDrafts.where((d) {
+      final name = d['FullName']?.toLowerCase() ?? '';
+      return name.contains(searchQuery.toLowerCase());
+    }).toList();
+
+    return filtered.take(currentLimit).toList();
+  }
+
+  Future<void> loadMoreDrafts() async {
+    if (isFetchingMore) return;
+
+    setState(() {
+      isFetchingMore = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    setState(() {
+      currentLimit += 10;
+      draftList = _applyFilters();
+      isFetchingMore = false;
+    });
+  }
+
+  Widget _buildDraftItem(Map<String, dynamic> draft) {
+    String draftGuid = draft['GUID'];
+    bool isSelected = draftGuid == selectedDraftGuid;
+    bool isUsed = draft['DraftStatus'] == 1;
+
+    String createdDate = "N/A";
+    if (draft['CreatedTime'] != null) {
+      DateTime parsedDate = DateTime.parse(draft['CreatedTime']);
+      createdDate = DateFormat('dd/MM/yy HH:mm:ss').format(parsedDate);
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedDraftGuid = draftGuid;
+        });
+      },
+      child: Container(
+        width: 420,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: isSelected
+                ? Colors.blue
+                : (isUsed ? Colors.green : Colors.grey),
+            width: isSelected ? 3 : 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  draft["FullName"] ?? "Unknown",
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isUsed
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isUsed ? "Used" : "Unused",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isUsed ? Colors.green : Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text("Last modified time: $createdDate"),
+            Text("Email: ${draft['ClientEmail'] ?? 'No Email'}"),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -85,34 +235,64 @@ class ReservationSelectDialogState extends State<ReservationSelectDialog> {
             ),
             const SizedBox(height: 10),
 
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Search by full name...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8))),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                    currentLimit = 10;
+                    draftList = _applyFilters();
+                  });
+                },
+              ),
+            ),
+
             // Draft List with Scrolling
             SizedBox(
-              height: 400, 
+              height: 400,
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : draftList.isEmpty
                       ? const Center(
                           child: Text(
                             "No drafts available",
-                            style: TextStyle(fontSize: 18, color: Colors.black54),
+                            style:
+                                TextStyle(fontSize: 18, color: Colors.black54),
                           ),
                         )
                       : Scrollbar(
                           controller: _scrollController,
                           thumbVisibility: true,
-                          child: ListView.builder(
+                          child: ListView(
                             controller: _scrollController,
-                            itemCount: draftList.length,
-                            itemBuilder: (context, index) {
-                              return _buildDraftItem(draftList[index]);
-                            },
+                            children: [
+                              ...draftList
+                                  .map((draft) => _buildDraftItem(draft))
+                                  .toList(),
+
+                              //  Add loading spinner if more items are being fetched
+                              if (isFetchingMore)
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                ),
+                            ],
                           ),
                         ),
             ),
 
             const SizedBox(height: 15),
 
-            // Dialog Actions
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -122,79 +302,16 @@ class ReservationSelectDialogState extends State<ReservationSelectDialog> {
                 ),
                 ElevatedButton(
                   onPressed: selectedDraftGuid != null
-                    ? () async {
-                        final selectedDraft = draftList.firstWhere((draft) => draft['GUID'] == selectedDraftGuid);
-
-                        String email = "jianhao.wee@gmail.com";
-                        String password =  "Qwert12345";
-                        final response = await ApiService.runAutoReserve(email,password);
-
-                        if (response['status']) {
-                          print("✅ Login Successful: ${response['message']}");
-                          print("🌍 Page Title: ${response['page_title']}");
-
-                          Navigator.pop(context, selectedDraft);
-                        } 
-                      }
-                      : null, // Disable button if no draft is selected
+                      ? _showRetryDurationDialog
+                      : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedDraftGuid != null ? Colors.blue : Colors.grey,
+                    backgroundColor:
+                        selectedDraftGuid != null ? Colors.blue : Colors.grey,
                   ),
                   child: const Text("Start"),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDraftItem(Map<String, dynamic> draft) {
-    String draftGuid = draft['GUID'];
-    bool isSelected = draftGuid == selectedDraftGuid;
-
-    String createdDate = "N/A";
-    if (draft['CreatedTime'] != null) {
-      DateTime parsedDate = DateTime.parse(draft['CreatedTime']);
-      createdDate = DateFormat('dd/MM/yy HH:mm:ss').format(parsedDate);
-    }
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedDraftGuid = draftGuid; 
-        });
-      },
-      child: Container(
-        width: 420, // Increase width of draft container
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey,
-            width: isSelected ? 3 : 1.5, 
-          ),
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              draft["FullName"] ?? "Unknown",
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            Text("Last modified time: $createdDate"),
-            Text("Email: ${draft["Email"] ?? 'No Email'}"),
           ],
         ),
       ),

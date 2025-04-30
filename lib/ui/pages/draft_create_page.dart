@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter_application/api_service.dart';
 import 'package:flutter_application/nav/session_manager.dart';
 
-
 class DraftCreatePage extends StatefulWidget {
   const DraftCreatePage({super.key});
 
@@ -78,6 +77,12 @@ class _DraftCreatePageState extends State<DraftCreatePage> {
   final _agentPhoneController = TextEditingController();
   final _remarksController = TextEditingController();
 
+  final _mhubEmailController = TextEditingController();
+  final _mhubPasswordController = TextEditingController();
+  final _projectNameController = TextEditingController();
+  final _blockNameController = TextEditingController();
+  final _unitNameController = TextEditingController();
+
   @override
   void dispose() {
     // Always dispose controllers when the widget is removed from the widget tree
@@ -94,6 +99,13 @@ class _DraftCreatePageState extends State<DraftCreatePage> {
     _agentNameController.dispose();
     _agentPhoneController.dispose();
     _remarksController.dispose();
+
+    _mhubEmailController.dispose();
+    _mhubPasswordController.dispose();
+    _projectNameController.dispose();
+    _blockNameController.dispose();
+    _unitNameController.dispose();
+
     super.dispose();
   }
 
@@ -101,7 +113,7 @@ class _DraftCreatePageState extends State<DraftCreatePage> {
     // Show a date picker to the user
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(), 
+      initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
@@ -120,7 +132,12 @@ class _DraftCreatePageState extends State<DraftCreatePage> {
 
     // ✅ Prepare the draft data
     final Map<String, dynamic> draftData = {
-      'AuthorGuid': SessionManager.currentUserGuid,  // ✅ Required author GUID
+      'MhubEmail': _mhubEmailController.text,
+      'MhubPassword': _mhubPasswordController.text,
+      'ProjectName': _projectNameController.text,
+      'BlockName': _blockNameController.text,
+      'UnitName': _unitNameController.text,
+      'AuthorGuid': SessionManager.currentUserGuid,
       'IdentityType': _selectedIdentity ?? '',
       'IdentityNumber': _identityNumberController.text,
       'Title': _selectedTitle ?? '',
@@ -132,9 +149,9 @@ class _DraftCreatePageState extends State<DraftCreatePage> {
       'Postcode': int.tryParse(_postCodeController.text) ?? 0,
       'City': _cityController.text,
       'State': _selectedState ?? '',
-      'FirstTime': _selectedFirstTimeBuyer == 'Yes' ? 'Y' : 'N',  // ✅ Convert 'Yes' → 'Y', 'No' → 'N'
+      'FirstTime': _selectedFirstTimeBuyer == 'Yes' ? 'Y' : 'N',
       'PaymentDate': _selectedPaymentDate != null
-          ? DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedPaymentDate!)  // ✅ Format as `DATETIME`
+          ? DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedPaymentDate!)
           : '',
       'AgencyCmp': _agencyCompanyController.text,
       'AgentName': _agentNameController.text,
@@ -149,7 +166,7 @@ class _DraftCreatePageState extends State<DraftCreatePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Draft submitted successfully!')),
         );
-        Navigator.pop(context, true); 
+        Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Submission failed: ${response['message']}')),
@@ -176,6 +193,97 @@ class _DraftCreatePageState extends State<DraftCreatePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // MHub Email (Text Field)
+              TextFormField(
+                controller: _mhubEmailController,
+                decoration: const InputDecoration(
+                  labelText: 'MHub Email *',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter your MHub email',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'MHub Email is required';
+                  }
+                  // Optional: Add email format validation
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                      .hasMatch(value)) {
+                    return 'Enter a valid email address';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // MHub Password (Text Field)
+              TextFormField(
+                controller: _mhubPasswordController,
+                decoration: const InputDecoration(
+                  labelText: 'MHub Password *',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter your MHub password',
+                ),
+                obscureText: true, // Hide password input
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'MHub Password is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Project Name (Text Field)
+              TextFormField(
+                controller: _projectNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Project Name *',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter the project name (or partial name)',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Project Name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Block Name (Text Field)
+              TextFormField(
+                controller: _blockNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Block Name *',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter the block name (e.g., C1, A2, B3)',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Block Name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Unit Name (Text Field)
+              TextFormField(
+                controller: _unitNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Unit Name *',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter the unit name (e.g., 12A-3A, 18-5)',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Unit Name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
               // -- Identity Type (Dropdown) --
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(

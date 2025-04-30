@@ -37,7 +37,8 @@ class DraftDetailPageState extends State<DraftDetailPage> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text("Confirm Deletion"),
-              content: const Text("Are you sure you want to delete this draft?"),
+              content:
+                  const Text("Are you sure you want to delete this draft?"),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
@@ -45,7 +46,8 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                  child:
+                      const Text("Delete", style: TextStyle(color: Colors.red)),
                 ),
               ],
             );
@@ -72,7 +74,7 @@ class DraftDetailPageState extends State<DraftDetailPage> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        loadDraftDetails(); // 🔥 Reload details when going back
+        loadDraftDetails();
         return true;
       },
       child: Scaffold(
@@ -103,18 +105,32 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildSectionTitle("Client Details"),
+                          _buildDetail("Mhub Email", draftData!["MhubEmail"]),
+                          _buildDetail(
+                              "Mhub Password", draftData!["MhubPassword"]),
+                          _buildDetail(
+                              "Project Name", draftData!["ProjectName"]),
+                          _buildDetail("Block Name", draftData!["BlockName"]),
+                          _buildDetail("Unit Name", draftData!["UnitName"]),
                           _buildDetail("Title", draftData!["Title"]),
                           _buildDetail("Full Name", draftData!["FullName"]),
-                          _buildDetail("Preferred Name", draftData!["PreferredName"]),
-                          _buildDetail("Identity Type", draftData!["IdentityType"]),
-                          _buildDetail("Identity Number", draftData!["IdentityNumber"]),
-                          _buildDetail("Email", draftData!["Email"]),
+                          _buildDetail(
+                              "Preferred Name", draftData!["PreferredName"]),
+                          _buildDetail(
+                              "Identity Type", draftData!["IdentityType"]),
+                          _buildDetail(
+                              "Identity Number", draftData!["IdentityNumber"]),
+                          _buildDetail(
+                              "Email",
+                              draftData![
+                                  "ClientEmail"]), // Note: Changed from "Email" to match backend
                           _buildDetail("Mobile", draftData!["Mobile"]),
                           _buildDetail("Address", draftData!["Address"]),
                           _buildDetail("Postcode", draftData!["PostCode"]),
                           _buildDetail("City", draftData!["City"]),
                           _buildDetail("State", draftData!["State"]),
-                          _buildDetail("First-Time Buyer", draftData!["FirstTime"]),
+                          _buildDetail(
+                              "First-Time Buyer", draftData!["FirstTime"]),
                         ],
                       ),
                     ),
@@ -127,16 +143,17 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 🟢 Buttons moved to the top-right corner
+                          // Buttons at the top-right
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.end, // Align buttons to the right
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               ElevatedButton(
                                 onPressed: () async {
                                   final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => DraftEditPage(draftData: draftData!),
+                                      builder: (context) =>
+                                          DraftEditPage(draftData: draftData!),
                                     ),
                                   );
 
@@ -146,27 +163,31 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                                 },
                                 child: const Text("Edit"),
                               ),
-                              const SizedBox(width: 10), // Spacing between buttons
+                              const SizedBox(width: 10),
                               ElevatedButton(
                                 onPressed: confirmDeleteDraft,
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red),
                                 child: const Text("Delete"),
                               ),
                             ],
                           ),
 
-                          const SizedBox(height: 20), // Add space below buttons
+                          const SizedBox(height: 20),
 
                           _buildSectionTitle("Agent Details"),
-                          _buildDetail("Agency Company", draftData!["AgencyCmp"]),
+                          _buildDetail(
+                              "Agency Company", draftData!["AgencyCmp"]),
                           _buildDetail("Agent Name", draftData!["AgentName"]),
                           _buildDetail("Agent Phone", draftData!["AgentPhone"]),
 
                           const SizedBox(height: 20),
 
                           _buildSectionTitle("Additional Information"),
-                          _buildDetail("Payment Date", draftData!["PaymentDate"]),
-                          _buildDetail("Created Time", draftData!["CreatedTime"]),
+                          _buildDetail(
+                              "Payment Date", draftData!["PaymentDate"]),
+                          _buildDetail(
+                              "Created Time", draftData!["CreatedTime"]),
                           _buildDetail("Remarks", draftData!["Remarks"]),
                         ],
                       ),
@@ -175,7 +196,6 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                 ),
               ),
             );
-
           },
         ),
       ),
@@ -187,7 +207,8 @@ class DraftDetailPageState extends State<DraftDetailPage> {
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+        style: const TextStyle(
+            fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
       ),
     );
   }
@@ -202,7 +223,7 @@ class DraftDetailPageState extends State<DraftDetailPage> {
             "$label:",
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-           Text(value != null ? "$value" : "N/A"),
+          Text(value != null ? "$value" : "N/A"),
         ],
       ),
     );

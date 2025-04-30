@@ -4,18 +4,19 @@ import 'package:flutter_application/nav/session_manager.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://192.168.0.105:8000/dingunit_backend";
+  static const String baseUrl = "http://localhost:8000/dingunit_backend";
 
   // ======================  User ======================
 
   //  Login
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
     try {
       // Debug: Log the request details
       // debugPrint("Preparing to send request to: ${Uri.parse('$baseUrl/login/')}");
       // debugPrint("Request headers: {'Content-Type': 'application/x-www-form-urlencoded'}");
       // debugPrint("Request body: email=$email, password=$password");
-      
+
       // Send the POST request
       final response = await http.post(
         Uri.parse('$baseUrl/login/'),
@@ -53,7 +54,8 @@ class ApiService {
       } else {
         // Handle non-200 HTTP responses
         debugPrint("Error: Received HTTP ${response.statusCode}");
-        throw Exception("Failed to connect to the server. HTTP ${response.statusCode}");
+        throw Exception(
+            "Failed to connect to the server. HTTP ${response.statusCode}");
       }
     } catch (e) {
       debugPrint("HTTP request failed: $e");
@@ -66,9 +68,10 @@ class ApiService {
   }
 
   //  Registration
-  static Future<Map<String, dynamic>> register(String username, String email, String password) async {
+  static Future<Map<String, dynamic>> register(
+      String username, String email, String password) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/register/'), 
+      Uri.parse('$baseUrl/register/'),
       body: {
         'username': username,
         'email': email,
@@ -89,7 +92,8 @@ class ApiService {
       debugPrint("Fetching user details for GUID: $userGuid");
 
       final response = await http.post(
-        Uri.parse('$baseUrl/get_user_details/'), // Make sure the URL matches your backend
+        Uri.parse(
+            '$baseUrl/get_user_details/'), // Make sure the URL matches your backend
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -115,7 +119,8 @@ class ApiService {
   }
 
   //  Update Access Right
-  static Future<Map<String, dynamic>> updateUserStatus(String userId, int newStatus) async {
+  static Future<Map<String, dynamic>> updateUserStatus(
+      String userId, int newStatus) async {
     final response = await http.post(
       Uri.parse('$baseUrl/update_accRight/'),
       body: {
@@ -137,7 +142,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/delete_user/'),
       body: {
-        'admin_guid': SessionManager.currentUserGuid!,        
+        'admin_guid': SessionManager.currentUserGuid!,
         'user_guid': userId,
       },
     );
@@ -150,73 +155,73 @@ class ApiService {
 
   //  Print user list
   static Future<Map<String, dynamic>> getUsersList({
-      required int pageStart,
-      required int pageSize,
-      required String searchTerm,
-    }) async {
-      final uri = Uri.parse('$baseUrl/users/')
-          .replace(queryParameters: {
-        'page_start': pageStart.toString(),
-        'page_size': pageSize.toString(),
-        'search_term': searchTerm,
-      });
+    required int pageStart,
+    required int pageSize,
+    required String searchTerm,
+  }) async {
+    final uri = Uri.parse('$baseUrl/users/').replace(queryParameters: {
+      'page_start': pageStart.toString(),
+      'page_size': pageSize.toString(),
+      'search_term': searchTerm,
+    });
 
-      try {
-        final response = await http.get(uri);
+    try {
+      final response = await http.get(uri);
 
-        // Debugging: Log the response
-        debugPrint("Fetching user list from: $uri");
-        debugPrint("Response status: ${response.statusCode}");
-        debugPrint("Response body: ${response.body}");
+      // Debugging: Log the response
+      debugPrint("Fetching user list from: $uri");
+      debugPrint("Response status: ${response.statusCode}");
+      debugPrint("Response body: ${response.body}");
 
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
 
-          // Extract Message and Response Code
-          String message = data['message'] ?? 'No message from server';
-          int responseCode = data['status_code'] ?? -1;
+        // Extract Message and Response Code
+        String message = data['message'] ?? 'No message from server';
+        int responseCode = data['status_code'] ?? -1;
 
-          // Check if response is successful
-          if (responseCode == 0) {
-            // Ensure 'data' exists and remove the first two fields (Message & Response)
-            if (data.containsKey('data') && data['data'] is List) {
-              List<Map<String, dynamic>> userList = List<Map<String, dynamic>>.from(data['data']);
+        // Check if response is successful
+        if (responseCode == 0) {
+          // Ensure 'data' exists and remove the first two fields (Message & Response)
+          if (data.containsKey('data') && data['data'] is List) {
+            List<Map<String, dynamic>> userList =
+                List<Map<String, dynamic>>.from(data['data']);
 
-              return {
-                'status': true,
-                'message': message,
-                'users': userList, // Extract actual users
-              };
-            } else {
-              return {
-                'status': false,
-                'message': 'Invalid response format: No user list found.',
-                'users': [],
-              };
-            }
+            return {
+              'status': true,
+              'message': message,
+              'users': userList, // Extract actual users
+            };
           } else {
             return {
               'status': false,
-              'message': message,
+              'message': 'Invalid response format: No user list found.',
               'users': [],
             };
           }
         } else {
           return {
             'status': false,
-            'message': 'Failed to load users. Server error.',
+            'message': message,
             'users': [],
           };
         }
-      } catch (e) {
-        debugPrint("Error fetching users: $e");
+      } else {
         return {
           'status': false,
-          'message': 'Failed to load users. Network error: $e',
+          'message': 'Failed to load users. Server error.',
           'users': [],
         };
       }
+    } catch (e) {
+      debugPrint("Error fetching users: $e");
+      return {
+        'status': false,
+        'message': 'Failed to load users. Network error: $e',
+        'users': [],
+      };
     }
+  }
 
   // ======================  Draft Management  ======================
 
@@ -261,54 +266,59 @@ class ApiService {
 
   //  Get Draft Details
   static Future<Map<String, dynamic>> getDraftDetails(String draftGuid) async {
-      final uri = Uri.parse('$baseUrl/get_draft_details/')
-          .replace(queryParameters: {'draft_guid': draftGuid});
+    final uri = Uri.parse('$baseUrl/get_draft_details/')
+        .replace(queryParameters: {'draft_guid': draftGuid});
 
-      try {
-          final response = await http.get(uri);
+    try {
+      final response = await http.get(uri);
 
-          if (response.statusCode == 200) {
-              final Map<String, dynamic> data = jsonDecode(response.body);
-              if (data['status_code'] == 0 && data['data'] != null && data['data'].isNotEmpty) {
-                  return {
-                      'status': true,
-                      'message': data['message'],
-                      'draft': data['data'][0],  // ✅ Extract first draft (Fix)
-                  };
-              } else {
-                  return {
-                      'status': false,
-                      'message': data['message'],
-                      'draft': null,
-                  };
-              }
-          } else {
-              return {
-                  'status': false,
-                  'message': 'Failed to load draft details. Server error.',
-                  'draft': null,
-              };
-          }
-      } catch (e) {
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        if (data['status_code'] == 0 &&
+            data['data'] != null &&
+            data['data'].isNotEmpty) {
           return {
-              'status': false,
-              'message': 'Failed to load draft details. Network error: $e',
-              'draft': null,
+            'status': true,
+            'message': data['message'],
+            'draft': data['data'][0],
           };
+        } else {
+          return {
+            'status': false,
+            'message': data['message'],
+            'draft': null,
+          };
+        }
+      } else {
+        return {
+          'status': false,
+          'message': 'Failed to load draft details. Server error.',
+          'draft': null,
+        };
       }
+    } catch (e) {
+      return {
+        'status': false,
+        'message': 'Failed to load draft details. Network error: $e',
+        'draft': null,
+      };
+    }
   }
 
   //  Create Draft
-  static Future<Map<String, dynamic>> createDraft(Map<String, dynamic> draftData) async {
-    
-    final bodyData = draftData.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value.toString())}').join('&');
+  static Future<Map<String, dynamic>> createDraft(
+      Map<String, dynamic> draftData) async {
+    final bodyData = draftData.entries
+        .map((e) =>
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value.toString())}')
+        .join('&');
 
     final response = await http.post(
       Uri.parse('$baseUrl/post_draft_data/'),
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: bodyData, 
+      body: bodyData,
     );
 
     if (response.statusCode == 200) {
@@ -322,9 +332,11 @@ class ApiService {
   }
 
   //  Update Draft
-  static Future<Map<String, dynamic>> updateDraft(Map<String, dynamic> draftData) async {
+  static Future<Map<String, dynamic>> updateDraft(
+      Map<String, dynamic> draftData) async {
     final bodyData = draftData.entries
-        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value.toString().trim())}')
+        .map((e) =>
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value.toString().trim())}')
         .join('&'); // ✅ Encode & Trim data before sending
 
     final response = await http.post(
@@ -332,7 +344,7 @@ class ApiService {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: bodyData, 
+      body: bodyData,
     );
 
     if (response.statusCode == 200) {
@@ -345,7 +357,7 @@ class ApiService {
     }
   }
 
-  //  Delete Draft 
+  //  Delete Draft
   static Future<Map<String, dynamic>> deleteDraft(String draftGuid) async {
     final response = await http.post(
       Uri.parse('$baseUrl/delete_draft_data/'),
@@ -360,7 +372,8 @@ class ApiService {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
-      if (data['status_code'] == 0) {  // ✅ Correctly check success status
+      if (data['status_code'] == 0) {
+        // ✅ Correctly check success status
         return {
           'status': true,
           'message': data['message'],
@@ -382,7 +395,8 @@ class ApiService {
   // ======================  Reservation Management  ======================
 
   //  Get Reservation List
-  static Future<Map<String, dynamic>> getReservationList(String authorGuid) async {
+  static Future<Map<String, dynamic>> getReservationList(
+      String authorGuid) async {
     final uri = Uri.parse('$baseUrl/get_reservation_list/')
         .replace(queryParameters: {'author_guid': authorGuid});
     try {
@@ -419,10 +433,11 @@ class ApiService {
   }
 
   //  Get Reservation Details
-  static Future<Map<String, dynamic>> getReservationDetails(String reservationGuid) async {
+  static Future<Map<String, dynamic>> getReservationDetails(
+      String reservationGuid) async {
     final uri = Uri.parse('$baseUrl/get_reservation_details/')
         .replace(queryParameters: {
-      'reservation_guid': reservationGuid,  
+      'reservation_guid': reservationGuid,
     });
 
     try {
@@ -459,7 +474,8 @@ class ApiService {
   }
 
   //  Create Reservation
-  static Future<Map<String, dynamic>> postReservation(Map<String, dynamic> reservationData) async {
+  static Future<Map<String, dynamic>> postReservation(
+      Map<String, dynamic> reservationData) async {
     final response = await http.post(
       Uri.parse('$baseUrl/post_reservation/'),
       headers: {
@@ -478,18 +494,18 @@ class ApiService {
     }
   }
 
-
   // ======================  Auto Reservation  ======================
-  static Future<Map<String, dynamic>> runAutoReserve(String email,String password,) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/run_reserve/'),
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: {
-        'email': email,        
-        'password': password,
-      });
+  static Future<Map<String, dynamic>> runAutoReserve(
+    String draftGuid,
+    int retryMinutes,
+  ) async {
+    final response =
+        await http.post(Uri.parse('$baseUrl/run_reserve/'), headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    }, body: {
+      'draft_guid': draftGuid,
+      'retry_minutes': retryMinutes.toString(),
+    });
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -498,4 +514,3 @@ class ApiService {
     }
   }
 }
-

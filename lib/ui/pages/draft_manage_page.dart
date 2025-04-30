@@ -18,16 +18,30 @@ class DraftManagerState extends State<DraftManager> {
   final int maxDrafts = 20;
   String? authorGuid;
 
+  final int initialLoad = 20;
+  final int pageSize = 6;
+  int currentLimit = 20;
+  bool isFetchingMore = false;
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     loadUserAndFetchDrafts();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent &&
+          !isFetchingMore &&
+          draftList.length < draftCount) {
+        loadMoreDrafts();
+      }
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    loadUserAndFetchDrafts(); 
+    loadUserAndFetchDrafts();
   }
 
   Future<void> loadUserAndFetchDrafts() async {
@@ -51,9 +65,14 @@ class DraftManagerState extends State<DraftManager> {
     final response = await ApiService.getDraftList(authorGuid!);
 
     if (response['status']) {
+      final allDrafts =
+          List<Map<String, dynamic>>.from(response['drafts'] ?? [])
+              .where((draft) => draft['DraftStatus'] == 0)
+              .toList();
+
       setState(() {
-        draftList = List<Map<String, dynamic>>.from(response['drafts'] ?? []); 
-        draftCount = draftList.length;
+        draftList = allDrafts.take(currentLimit).toList();
+        draftCount = allDrafts.length;
         isLoading = false;
       });
     } else {
@@ -61,7 +80,7 @@ class DraftManagerState extends State<DraftManager> {
         isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'])),        
+        SnackBar(content: Text(response['message'])),
       );
     }
   }
@@ -70,21 +89,22 @@ class DraftManagerState extends State<DraftManager> {
     try {
       final response = await ApiService.deleteDraft(draftGuid);
 
-      if (response['status']) { 
+      if (response['status']) {
         setState(() {
           draftList.removeWhere((draft) => draft['GUID'] == draftGuid);
           draftCount = draftList.length;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'])),  // ✅ Show success message
+          SnackBar(
+              content: Text(response['message'])), // ✅ Show success message
         );
 
-        await fetchDrafts();  // ✅ Ensure the latest list is fetched
-
+        await fetchDrafts(); // ✅ Ensure the latest list is fetched
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to delete draft: ${response['message']}")),
+          SnackBar(
+              content: Text("Failed to delete draft: ${response['message']}")),
         );
       }
     } catch (e) {
@@ -96,9 +116,9 @@ class DraftManagerState extends State<DraftManager> {
 
   Widget draftItem(Map<String, dynamic> draft, int orderNumber) {
     String createdDate = "N/A";
-  if (draft['CreatedTime'] != null) {
+    if (draft['CreatedTime'] != null) {
       DateTime parsedDate = DateTime.parse(draft['CreatedTime']);
-      createdDate = DateFormat('dd/MM/yy HH:mm:ss').format(parsedDate); 
+      createdDate = DateFormat('dd/MM/yy HH:mm:ss').format(parsedDate);
     }
 
     return GestureDetector(
@@ -131,7 +151,7 @@ class DraftManagerState extends State<DraftManager> {
               children: [
                 // Full Name (Previously "Name")
                 Text(
-                  "$orderNumber. ${draft['FullName'] ?? 'Unknown'}",  // ✅ Updated to display full name
+                  "$orderNumber. ${draft['FullName'] ?? 'Unknown'}", // ✅ Updated to display full name
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -151,7 +171,7 @@ class DraftManagerState extends State<DraftManager> {
 
                 // Email (Newly Added)
                 Text(
-                  "Email: ${draft['Email'] ?? 'No Email'}",  // ✅ Now showing Email
+                  "Email: ${draft['ClientEmail'] ?? 'No Email'}", // ✅ Now showing Email
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.black54,
@@ -170,7 +190,8 @@ class DraftManagerState extends State<DraftManager> {
                     builder: (BuildContext context) {
                       return AlertDialog(
                         title: const Text("Confirm Deletion"),
-                        content: const Text("Are you sure you want to delete this draft?"),
+                        content: const Text(
+                            "Are you sure you want to delete this draft?"),
                         actions: [
                           TextButton(
                             child: const Text("Cancel"),
@@ -180,14 +201,18 @@ class DraftManagerState extends State<DraftManager> {
                             child: const Text("Delete"),
                             onPressed: () async {
                               try {
-                                await deleteDraft(draft['GUID']); // ✅ Wait until deletion completes
+                                await deleteDraft(draft[
+                                    'GUID']); // ✅ Wait until deletion completes
 
                                 if (mounted) {
-                                  Navigator.of(context).pop(); // ✅ Close the dialog ONLY AFTER deletion succeeds
+                                  Navigator.of(context)
+                                      .pop(); // ✅ Close the dialog ONLY AFTER deletion succeeds
                                 }
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Error deleting draft: $e")),
+                                  SnackBar(
+                                      content:
+                                          Text("Error deleting draft: $e")),
                                 );
                               }
                             },
@@ -205,6 +230,37 @@ class DraftManagerState extends State<DraftManager> {
     );
   }
 
+  Future<void> loadMoreDrafts() async {
+    setState(() {
+      isFetchingMore = true;
+    });
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    setState(() {
+      currentLimit += pageSize;
+    });
+
+    await fetchDrafts();
+
+    setState(() {
+      isFetchingMore = false;
+    });
+
+    // Auto scroll a bit after loading
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent + 100,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,15 +276,17 @@ class DraftManagerState extends State<DraftManager> {
             // Add Draft Button
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, AppRoutes.draftCreate).then((result) {
+                Navigator.pushNamed(context, AppRoutes.draftCreate)
+                    .then((result) {
                   if (result == true) {
-                    fetchDrafts(); 
+                    fetchDrafts();
                   }
                 });
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueAccent,
-                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -243,7 +301,8 @@ class DraftManagerState extends State<DraftManager> {
             // Scrollable Draft List
             Expanded(
               child: isLoading
-                  ? const Center(child: CircularProgressIndicator()) // Loading indicator
+                  ? const Center(
+                      child: CircularProgressIndicator()) // Loading indicator
                   : draftList.isEmpty
                       ? const Center(
                           child: Text(
@@ -255,25 +314,39 @@ class DraftManagerState extends State<DraftManager> {
                           ),
                         )
                       : SingleChildScrollView(
+                          controller: _scrollController,
                           child: Column(
-                            children: List.generate(
-                              (draftList.length / 2).ceil(),
-                              (index) {
-                                int leftIndex = index * 2;
-                                int rightIndex = leftIndex + 1;
+                            children: [
+                              ...List.generate(
+                                (draftList.length / 2).ceil(),
+                                (index) {
+                                  int leftIndex = index * 2;
+                                  int rightIndex = leftIndex + 1;
 
-                                return Row(
-                                  children: [
-                                    Expanded(child: draftItem(draftList[leftIndex], leftIndex + 1)),
-                                    const SizedBox(width: 10), // Spacing
-                                    if (rightIndex < draftList.length)
-                                      Expanded(child: draftItem(draftList[rightIndex], rightIndex + 1))
-                                    else
-                                      Expanded(child: Container()), // Empty space if odd number
-                                  ],
-                                );
-                              },
-                            ),
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                          child: draftItem(draftList[leftIndex],
+                                              leftIndex + 1)),
+                                      const SizedBox(width: 10),
+                                      if (rightIndex < draftList.length)
+                                        Expanded(
+                                            child: draftItem(
+                                                draftList[rightIndex],
+                                                rightIndex + 1))
+                                      else
+                                        Expanded(child: Container()),
+                                    ],
+                                  );
+                                },
+                              ),
+                              if (isFetchingMore)
+                                const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                )
+                            ],
                           ),
                         ),
             ),
