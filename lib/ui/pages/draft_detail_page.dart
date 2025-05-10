@@ -120,22 +120,22 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                               "Identity Type", draftData!["IdentityType"]),
                           _buildDetail(
                               "Identity Number", draftData!["IdentityNumber"]),
+                          _buildDetail("Email", draftData!["ClientEmail"]),
                           _buildDetail(
-                              "Email",
-                              draftData![
-                                  "ClientEmail"]), // Note: Changed from "Email" to match backend
+                              "CountryCode", draftData!["CountryCode"]),
                           _buildDetail("Mobile", draftData!["Mobile"]),
                           _buildDetail("Address", draftData!["Address"]),
                           _buildDetail("Postcode", draftData!["PostCode"]),
                           _buildDetail("City", draftData!["City"]),
                           _buildDetail("State", draftData!["State"]),
+                          _buildDetail("Country", draftData!["Country"]),
                           _buildDetail(
                               "First-Time Buyer", draftData!["FirstTime"]),
                         ],
                       ),
                     ),
 
-                    const SizedBox(width: 30), // Add spacing between columns
+                    const SizedBox(width: 30),
 
                     // Right Side - Agent Details, Additional Info, and Buttons
                     Expanded(
@@ -143,7 +143,6 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Buttons at the top-right
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -172,17 +171,13 @@ class DraftDetailPageState extends State<DraftDetailPage> {
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 20),
-
                           _buildSectionTitle("Agent Details"),
                           _buildDetail(
                               "Agency Company", draftData!["AgencyCmp"]),
                           _buildDetail("Agent Name", draftData!["AgentName"]),
                           _buildDetail("Agent Phone", draftData!["AgentPhone"]),
-
                           const SizedBox(height: 20),
-
                           _buildSectionTitle("Additional Information"),
                           _buildDetail(
                               "Payment Date", draftData!["PaymentDate"]),

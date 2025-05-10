@@ -12,12 +12,6 @@ class ApiService {
   static Future<Map<String, dynamic>> login(
       String email, String password) async {
     try {
-      // Debug: Log the request details
-      // debugPrint("Preparing to send request to: ${Uri.parse('$baseUrl/login/')}");
-      // debugPrint("Request headers: {'Content-Type': 'application/x-www-form-urlencoded'}");
-      // debugPrint("Request body: email=$email, password=$password");
-
-      // Send the POST request
       final response = await http.post(
         Uri.parse('$baseUrl/login/'),
         headers: {
@@ -29,31 +23,22 @@ class ApiService {
         },
       );
 
-      // Debug: Log the response status and body
-      // debugPrint("Request sent successfully");
-      // debugPrint("Response status: ${response.statusCode}");
-      // debugPrint("Response body: ${response.body}");
-
       if (response.statusCode == 200) {
-        // Decode the JSON response
         final Map<String, dynamic> data = jsonDecode(response.body);
 
-        // Check if the status_code is 0 (success)
         if (data['status_code'] == 0) {
           return {
             'status': true,
-            'message': data['message'], // Success message
-            'guid': data['data']['GUID'], // User GUID
+            'message': data['message'],
+            'guid': data['data']['GUID'],
           };
         } else {
           return {
             'status': false,
-            'message': data['message'], // Failure message from backend
+            'message': data['message'],
           };
         }
       } else {
-        // Handle non-200 HTTP responses
-        debugPrint("Error: Received HTTP ${response.statusCode}");
         throw Exception(
             "Failed to connect to the server. HTTP ${response.statusCode}");
       }
@@ -62,7 +47,6 @@ class ApiService {
       if (e is http.ClientException) {
         debugPrint("ClientException details: ${e.message}");
       }
-      // Rethrow the exception to be handled by the caller
       throw Exception("An error occurred during the request: $e");
     }
   }
