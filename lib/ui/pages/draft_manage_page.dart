@@ -38,12 +38,6 @@ class DraftManagerState extends State<DraftManager> {
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    loadUserAndFetchDrafts();
-  }
-
   Future<void> loadUserAndFetchDrafts() async {
     await SessionManager.loadSession();
     authorGuid = SessionManager.currentUserGuid;
@@ -62,6 +56,10 @@ class DraftManagerState extends State<DraftManager> {
 
   Future<void> fetchDrafts() async {
     if (authorGuid == null) return;
+    setState(() {
+      isLoading = true;
+    });
+
     final response = await ApiService.getDraftList(authorGuid!);
 
     if (response['status']) {
@@ -70,18 +68,22 @@ class DraftManagerState extends State<DraftManager> {
               .where((draft) => draft['DraftStatus'] == 0)
               .toList();
 
-      setState(() {
-        draftList = allDrafts.take(currentLimit).toList();
-        draftCount = allDrafts.length;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          draftList = allDrafts.take(currentLimit).toList();
+          draftCount = allDrafts.length;
+          isLoading = false;
+        });
+      }
     } else {
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'])),
-      );
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'])),
+        );
+      }
     }
   }
 
@@ -96,11 +98,10 @@ class DraftManagerState extends State<DraftManager> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(response['message'])), // ✅ Show success message
+          SnackBar(content: Text(response['message'])),
         );
 
-        await fetchDrafts(); // ✅ Ensure the latest list is fetched
+        await fetchDrafts();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -126,8 +127,8 @@ class DraftManagerState extends State<DraftManager> {
         Navigator.pushNamed(
           context,
           AppRoutes.draftDetail,
-          arguments: draft['GUID'], // Pass draft GUID to detail page
-        ).then((_) => fetchDrafts()); // Refresh list when returning
+          arguments: draft['GUID'],
+        ).then((_) => fetchDrafts());
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -149,9 +150,8 @@ class DraftManagerState extends State<DraftManager> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Full Name (Previously "Name")
                 Text(
-                  "$orderNumber. ${draft['FullName'] ?? 'Unknown'}", // ✅ Updated to display full name
+                  "$orderNumber. ${draft['FullName'] ?? 'Unknown'}",
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -159,7 +159,6 @@ class DraftManagerState extends State<DraftManager> {
                 ),
                 const SizedBox(height: 5),
 
-                // Created Date
                 Text(
                   "Last modified time: $createdDate",
                   style: const TextStyle(
@@ -201,12 +200,10 @@ class DraftManagerState extends State<DraftManager> {
                             child: const Text("Delete"),
                             onPressed: () async {
                               try {
-                                await deleteDraft(draft[
-                                    'GUID']); // ✅ Wait until deletion completes
+                                await deleteDraft(draft['GUID']);
 
                                 if (mounted) {
-                                  Navigator.of(context)
-                                      .pop(); // ✅ Close the dialog ONLY AFTER deletion succeeds
+                                  Navigator.of(context).pop();
                                 }
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(

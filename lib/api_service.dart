@@ -76,23 +76,18 @@ class ApiService {
       debugPrint("Fetching user details for GUID: $userGuid");
 
       final response = await http.post(
-        Uri.parse(
-            '$baseUrl/get_user_details/'), // Make sure the URL matches your backend
+        Uri.parse('$baseUrl/get_user_details/'),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {
-          'guid': userGuid, // Send GUID in the request body
+          'guid': userGuid,
         },
       );
 
-      // Debug logs
-      // debugPrint("Response status: ${response.statusCode}");
-      // debugPrint("Response body: ${response.body}");
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        return data; // Return only the data object
+        return data;
       } else {
         throw Exception('Failed to fetch user details');
       }

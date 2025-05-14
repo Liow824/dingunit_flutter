@@ -12,13 +12,11 @@ import '../ui/pages/user_management_page.dart';
 import '../ui/pages/registration_page.dart';
 import '../ui/pages/profile_page.dart';
 import '../ui/pages/user_inform_page.dart';
-
-
 import 'routes.dart';
 
 class SessionManager {
-  static String? _currentUserGuid; // Cached GUID
-  static String? _currentUserRole; // Cached Role
+  static String? _currentUserGuid;
+  static String? _currentUserRole;
 
   static String? get currentUserGuid => _currentUserGuid;
   static String? get currentUserRole => _currentUserRole;
@@ -90,27 +88,31 @@ class SessionManager {
 
       case AppRoutes.draftManage:
         return MaterialPageRoute(builder: (_) => const DraftManager());
-      
+
       case AppRoutes.draftDetail:
         final String draftGuid = settings.arguments as String;
-        return MaterialPageRoute(builder: (_) => DraftDetailPage(draftGuid: draftGuid));
-      
+        return MaterialPageRoute(
+            builder: (_) => DraftDetailPage(draftGuid: draftGuid));
+
       case AppRoutes.draftCreate:
         return MaterialPageRoute(builder: (_) => const DraftCreatePage());
 
       case AppRoutes.draftEdit:
-          final Map<String, dynamic>? draftData = settings.arguments as Map<String, dynamic>?;
-          if (draftData != null) {
-            return MaterialPageRoute(builder: (_) => DraftEditPage(draftData: draftData));
-          }
+        final Map<String, dynamic>? draftData =
+            settings.arguments as Map<String, dynamic>?;
+        if (draftData != null) {
           return MaterialPageRoute(
-            builder: (_) => const Scaffold(
-              body: Center(child: Text('Error: Missing Draft Data')),
-            ),
-          );
+              builder: (_) => DraftEditPage(draftData: draftData));
+        }
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(child: Text('Error: Missing Draft Data')),
+          ),
+        );
 
       case AppRoutes.reservationSelect:
-        return MaterialPageRoute(builder: (_) => const ReservationSelectDialog());
+        return MaterialPageRoute(
+            builder: (_) => const ReservationSelectDialog());
 
       default:
         return MaterialPageRoute(
@@ -121,5 +123,3 @@ class SessionManager {
     }
   }
 }
-
-

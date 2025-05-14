@@ -4,7 +4,6 @@ import '../../api_service.dart';
 import '../../nav/session_manager.dart';
 import '../../nav/routes.dart';
 
-
 class AuthenticationPage extends StatefulWidget {
   const AuthenticationPage({super.key});
 
@@ -23,8 +22,6 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
       String password = _passwordController.text;
 
       try {
-        // debugPrint("Attempting login with email: $email");
-
         final result = await ApiService.login(email, password);
 
         if (result['status']) {
@@ -47,13 +44,14 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
           showMessageDialog("Login Failed", result['message']);
         }
       } catch (e) {
-        // debugPrint("Error during login: $e");
-        showMessageDialog("Error", "An unexpected error occurred. Please try again.");
+        showMessageDialog(
+            "Error", "An unexpected error occurred. Please try again.");
       }
     }
   }
 
-  void showMessageDialog(String title, String message, {VoidCallback? onConfirm}) {
+  void showMessageDialog(String title, String message,
+      {VoidCallback? onConfirm}) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -63,7 +61,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context); // Close the dialog
-              if (onConfirm != null) onConfirm(); // If there's a confirmation action, execute it
+              if (onConfirm != null)
+                onConfirm(); // If there's a confirmation action, execute it
             },
             child: const Text('OK'),
           ),
@@ -104,7 +103,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                 TextFormField(
                   controller: _emailController,
                   decoration: inputDecoration.copyWith(labelText: "Email"),
-                  validator: (value) => value!.isEmpty ? "Please enter your email" : null,
+                  validator: (value) =>
+                      value!.isEmpty ? "Please enter your email" : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -113,7 +113,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   controller: _passwordController,
                   obscureText: true,
                   decoration: inputDecoration.copyWith(labelText: "Password"),
-                  validator: (value) => value!.isEmpty ? "Please enter your password" : null,
+                  validator: (value) =>
+                      value!.isEmpty ? "Please enter your password" : null,
                 ),
                 const SizedBox(height: 30),
 
@@ -133,7 +134,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                           borderRadius: BorderRadius.circular(12),
                           side: const BorderSide(color: Colors.blue),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 40),
                       ),
                       child: const Text("Register"),
                     ),
@@ -149,7 +151,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 40),
                       ),
                       child: const Text("Login"),
                     ),
